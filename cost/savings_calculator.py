@@ -47,6 +47,7 @@ MODEL_PRICES = {
 }
 GBS_PRICE = {"arm": 0.0000133334, "x86": 0.0000166667}
 GPU_MONTHLY = {"g6.xlarge": 0.8048 * 730, "g5.xlarge": 1.006 * 730}
+EC2_CPU_MONTHLY = {"c7g.large": 0.0725 * 730, "m7g.large": 0.0816 * 730, "c7g.xlarge": 0.145 * 730}
 FREE_TIER_GBS = 400_000
 FREE_TIER_REQUESTS = 1_000_000
 SECONDS_PER_MONTH = 730 * 3600
@@ -84,6 +85,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--image-gb", type=float, default=4.1, help="compressed image size in ECR, GB")
     parser.add_argument("--provisioned-environments", type=int, default=0,
                         help="environments with provisioned concurrency (no cold start, always billed)")
+    parser.add_argument("--ec2-instance", choices=sorted(EC2_CPU_MONTHLY), default="m7g.large",
+                        help="always-on Graviton3 instance serving Decider in bf16 (on-demand, us-east-1)")
     parser.add_argument("--gpu-instance", choices=sorted(GPU_MONTHLY), default=None)
     parser.add_argument("--gpu-monthly", type=float, default=None, help="fixed monthly cost of a GPU machine")
     return parser.parse_args()
@@ -138,6 +141,13 @@ def main() -> None:
             ("Hybrid with Decider in Lambda (no free tier)", hybrid_llm,
              lambda_cost(hybrid_gbs, hybrid_requests, False)),
         ]
+    ec2 = EC2_CPU_MONTHLY[args.ec2_instance]
+    rows += [
+        (f"Hybrid with Decider on an always-on EC2 {args.ec2_instance} (bf16)", hybrid_llm, ec2),
+        ("Decider only (no LLM, unclear alerts to a person) in Lambda" + suffix, 0.0,
+         lambda_cost(n * routing_gbs, n, free_tier)),
+        (f"Decider only (no LLM, unclear alerts to a person) on EC2 {args.ec2_instance}", 0.0, ec2),
+    ]
     gpu = args.gpu_monthly if args.gpu_monthly is not None else (GPU_MONTHLY[args.gpu_instance] if args.gpu_instance else None)
     if gpu is not None:
         rows.append(("Hybrid with Decider on a GPU instance running all month", hybrid_llm, gpu))
@@ -166,6 +176,8 @@ def main() -> None:
         print(f"\nBreak-even with paid Lambda (hybrid vs baseline, both with the classifier in Lambda): "
               f"hybrid pays off if Decider resolves more than {break_even:.1%} of alerts (current fraction: "
               f"{args.s1_fraction:.0%}). Treats the measured classifier queries as fixed.")
+    print(f"EC2 {args.ec2_instance} beats paid Lambda above {ec2 / routing_query:,.0f} routing queries per month "
+          f"(${ec2:,.2f} per month on-demand).")
     print("Self-hosted Decider: marginal cost per query is 0; the cost is the machine.")
     if args.provisioned_environments:
         print(f"Provisioned concurrency: {args.provisioned_environments} environment(s) of {args.lambda_gb:g} GB = "

@@ -1,0 +1,16 @@
+[Unit]
+Description=Strands Decider (System 1) on CPU, bf16, one evaluation at a time
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=decider
+WorkingDirectory=/opt/strands-arnes-decider
+Environment=HF_HOME=/opt/hf
+Environment=HF_HUB_OFFLINE=1
+ExecStart=/opt/venv/bin/python deploy/ec2/serve.py --host 127.0.0.1 --port 8099
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

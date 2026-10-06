@@ -7,17 +7,20 @@ Companion code for the article *"Un modelo System One casi gratis: Strands Decid
 - **System 1:** Decider answers short, constrained questions (`noul`, `choice`, `score`) and resolves the clear cases.
 - **System 2:** a Strands agent on Amazon Bedrock (Nova Lite / Nova Pro) handles everything Decider is unsure about.
 
-Decider runs on a local GPU for development and on AWS Lambda (CPU, arm64) for deployment.
+Decider runs on a local GPU for development, and on CPU in AWS: an EC2 Graviton3 instance (bf16, the faster and cheaper-per-decision option measured) or AWS Lambda (arm64).
 
 ## Repository layout
 
 | Path | Contents |
 |---|---|
 | `examples/` | Runnable examples: HTTP client, fail-closed tool gate, `HumanInTheLoop` classifier, model router, harness integration and a 12-alert DevOps case. See [`examples/README.md`](examples/README.md). |
+| `deploy/ec2/` | `serve.py` (official FastAPI app, bf16 on CPU, one evaluation at a time for issue #17), a systemd unit and a concurrency smoke test. |
 | `deploy/lambda/` | Lambda handler, container image (Dockerfile, CodeBuild buildspec), SAM template and local tests. See [`deploy/lambda/README.md`](deploy/lambda/README.md). |
 | `scripts/aws_lambda/` | boto3 scripts to build the image in CodeBuild, deploy the function, measure it and tear everything down. |
+| `scripts/aws_ec2/benchmark.py` | Temporary EC2 Graviton instance driven through SSM (no SSH, no inbound rules): CPU benchmark, head fine-tuning run, teardown. |
+| `finetune/` | Adapt Decider to your use case: generate labelled alerts with Bedrock, build splits, fine-tune only the readout head (frozen torso, cached features), evaluate the "Decider only" policy. |
 | `scripts/issue17_control.py` | Reproduces the upstream concurrency issue (#17) against a sequential control and a locked server. |
-| `benchmarks/` | Local latency, multi-question and language benchmarks for the Decider server. |
+| `benchmarks/` | Latency, multi-question and language benchmarks, and `cpu_variants.py` (fp32 vs bf16 vs int8 on CPU). |
 | `cost/savings_calculator.py` | Monthly cost estimate: LLM only vs. Decider self-hosted vs. Decider on Lambda, including the `HumanInTheLoop` classifier queries. |
 | `env/` | Environment script and locked dependencies. |
 
@@ -50,6 +53,26 @@ python cost/savings_calculator.py                     # Nova Lite, three questio
 python cost/savings_calculator.py --duration-s 2.414  # one question per alert
 python cost/savings_calculator.py --model nova-pro
 ```
+
+## Hosting on EC2 Graviton
+
+```bash
+python deploy/ec2/serve.py --host 127.0.0.1 --port 8099   # bf16 on CPU, serialized evaluations
+python deploy/ec2/smoke_test.py --clients 8 --requests 24
+```
+
+Measured on a c7g.2xlarge (Graviton3): 0.49 s for one question and 1.27 s for three with bf16 and 8 threads, about five times faster than Lambda arm64. int8 dynamic quantization was slower and changed answers. An always-on instance is a fixed cost: run the calculator with `--ec2-instance` to see where it beats Lambda.
+
+## Adapting Decider to your case
+
+```bash
+python finetune/generate_alerts.py        # labelled synthetic alerts (Bedrock, a few cents)
+python finetune/build_examples.py         # train / calib / test splits, hand-written holdout kept apart
+python finetune/tune_head.py --out results/finetune/checkpoint
+python finetune/evaluate.py --checkpoint results/finetune/checkpoint --name tuned
+```
+
+Only the readout head is trained; the torso and its LoRA stay frozen, so the torso runs once and training takes seconds on CPU. Evaluate on cases the tuning never saw: on synthetic test alerts accuracy rose from 76.7 % to 95 %, while on 12 hand-written alerts it dropped from 91.7 % to 83.3 %.
 
 ## Deploying to AWS Lambda
 
