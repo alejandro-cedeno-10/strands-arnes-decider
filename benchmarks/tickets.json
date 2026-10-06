@@ -1,0 +1,177 @@
+{
+ "_note": "30 SYNTHETIC support tickets written in Spanish, used to compare English vs Spanish question wording. Labels: 8 billing, 7 sales, 7 retail, 8 other.",
+ "labels": {
+  "en": {
+   "billing": "payments, invoices, charges, payouts, refunds or account balance",
+   "sales": "buying a new product or plan, prices, quotes, discounts or upgrades",
+   "retail": "physical stores: in-store purchases, store hours, pickup at a store, store staff",
+   "other": "none of the above, or not enough information to decide"
+  },
+  "es": {
+   "billing": "pagos, facturas, cobros, depósitos, reembolsos o saldo de la cuenta",
+   "sales": "comprar un producto o plan nuevo, precios, cotizaciones, descuentos o mejoras de plan",
+   "retail": "tiendas físicas: compras en tienda, horarios, retiro en tienda, personal de la tienda",
+   "other": "nada de lo anterior, o no hay información suficiente para decidir"
+  }
+ },
+ "questions": {
+  "en": "Which team should handle this support ticket?",
+  "es": "¿Qué equipo debe atender este ticket de soporte?"
+ },
+ "tickets": [
+  {
+   "id": 1,
+   "label": "billing",
+   "text": "¡Ayuda! Mis depósitos llevan 3 días fallando y no me llega la plata."
+  },
+  {
+   "id": 2,
+   "label": "billing",
+   "text": "Me cobraron dos veces la suscripción de este mes en la tarjeta."
+  },
+  {
+   "id": 3,
+   "label": "billing",
+   "text": "No encuentro la factura electrónica de septiembre, la necesito para el contador."
+  },
+  {
+   "id": 4,
+   "label": "billing",
+   "text": "Pedí un reembolso hace dos semanas y todavía no se refleja en mi cuenta."
+  },
+  {
+   "id": 5,
+   "label": "billing",
+   "text": "¿Por qué mi saldo aparece negativo si ya pagué todo?"
+  },
+  {
+   "id": 6,
+   "label": "billing",
+   "text": "La factura sale con el RUC equivocado, ¿la pueden anular y emitir otra?"
+  },
+  {
+   "id": 7,
+   "label": "billing",
+   "text": "El débito automático no se hizo y ahora me cobran recargo por mora."
+  },
+  {
+   "id": 8,
+   "label": "billing",
+   "text": "Quiero cambiar la tarjeta con la que pago cada mes."
+  },
+  {
+   "id": 9,
+   "label": "sales",
+   "text": "¿Cuánto cuesta el plan empresarial para 50 usuarios?"
+  },
+  {
+   "id": 10,
+   "label": "sales",
+   "text": "Necesito una cotización formal para comprar 20 licencias."
+  },
+  {
+   "id": 11,
+   "label": "sales",
+   "text": "¿Tienen descuento si pago el año completo por adelantado?"
+  },
+  {
+   "id": 12,
+   "label": "sales",
+   "text": "Quiero pasar del plan básico al plan pro, ¿qué incluye?"
+  },
+  {
+   "id": 13,
+   "label": "sales",
+   "text": "Somos una ONG, ¿manejan precios especiales?"
+  },
+  {
+   "id": 14,
+   "label": "sales",
+   "text": "Me interesa el producto nuevo que anunciaron, ¿cuándo puedo comprarlo?"
+  },
+  {
+   "id": 15,
+   "label": "sales",
+   "text": "¿Me pueden agendar una demo para el equipo de compras?"
+  },
+  {
+   "id": 16,
+   "label": "retail",
+   "text": "¿A qué hora abre la tienda del centro comercial el domingo?"
+  },
+  {
+   "id": 17,
+   "label": "retail",
+   "text": "Compré en la tienda física y el cajero no me dio el comprobante."
+  },
+  {
+   "id": 18,
+   "label": "retail",
+   "text": "Elegí retiro en tienda pero en el local dicen que mi pedido no ha llegado."
+  },
+  {
+   "id": 19,
+   "label": "retail",
+   "text": "La vendedora de la sucursal norte me trató muy mal."
+  },
+  {
+   "id": 20,
+   "label": "retail",
+   "text": "¿Puedo cambiar en cualquier local un producto que compré en otra tienda?"
+  },
+  {
+   "id": 21,
+   "label": "retail",
+   "text": "El estacionamiento de su tienda está cerrado y no puedo entrar."
+  },
+  {
+   "id": 22,
+   "label": "retail",
+   "text": "Fui al local y el producto de la vitrina tenía otro precio que en la caja."
+  },
+  {
+   "id": 23,
+   "label": "other",
+   "text": "Hola, buenas tardes."
+  },
+  {
+   "id": 24,
+   "label": "other",
+   "text": "¿Están contratando desarrolladores? Quisiera enviar mi hoja de vida."
+  },
+  {
+   "id": 25,
+   "label": "other",
+   "text": "La aplicación se cierra sola cuando abro la cámara."
+  },
+  {
+   "id": 26,
+   "label": "other",
+   "text": "Quiero borrar todos mis datos personales de su sistema."
+  },
+  {
+   "id": 27,
+   "label": "other",
+   "text": "¿Cuál es la dirección de sus oficinas para enviar una carta notarial?"
+  },
+  {
+   "id": 28,
+   "label": "other",
+   "text": "No me llega el código de verificación por SMS para iniciar sesión."
+  },
+  {
+   "id": 29,
+   "label": "other",
+   "text": "Soy periodista y quisiera una entrevista con el gerente."
+  },
+  {
+   "id": 30,
+   "label": "other",
+   "text": "asdf"
+  }
+ ],
+ "out_of_options": {
+  "_note": "Ticket that fits none of billing/sales/retail; asked with and without the other option.",
+  "text": "Mi perro se comió el cable del router y ahora no tengo internet en la casa."
+ }
+}

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.venv-harness/
+
+# Model weights, caches and run outputs
+.cache/
+results/
+*.log
+
+# Secrets and local config
+.env
+*.pem
+*.key
+
+# Images are published in the article only, never in this repository
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.bmp
+*.ico
+*.tif
+*.tiff
+
+# Generated pages
+*.html
+
+# Local spec-driven workflow notes
+openspec/

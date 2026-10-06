@@ -1,0 +1,17 @@
+version: 0.2
+# Variables injected by the CodeBuild project: ECR_REGISTRY, ECR_REPOSITORY, IMAGE_TAG.
+phases:
+  pre_build:
+    commands:
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+      - docker version --format 'docker {{.Server.Version}}'
+      - df -h / | tail -1
+  build:
+    commands:
+      - DOCKER_BUILDKIT=1 docker build --platform linux/arm64 --provenance=false -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" . || DOCKER_BUILDKIT=1 docker build --platform linux/arm64 -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
+      - docker image inspect "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" --format 'IMAGE_SIZE_BYTES={{.Size}} ARCH={{.Architecture}}'
+      - docker run --rm --entrypoint sh "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" -c "du -sh /opt/hf /var/lang/lib/python3.12/site-packages; pip list 2>/dev/null | grep -i -E '^(torch|nvidia|transformers|peft|strands)'"
+  post_build:
+    commands:
+      - docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+      - echo "PUSHED $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"

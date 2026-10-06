@@ -1,0 +1,37 @@
+# AWS SAM: Strands Decider as a private Lambda function (IAM only).
+# The image was deployed and measured on AWS Lambda with the boto3 scripts (see README.md); this SAM template
+# was NOT tested (neither `sam build` nor `sam deploy`). Treat it as an unverified starting point.
+#   sam build && sam deploy --guided
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Strands Decider 2B (CPU) behind IAM. Experimental.
+
+Parameters:
+  KeepBf16:
+    Type: String
+    Default: "0"
+    AllowedValues: ["0", "1"]
+    Description: "1 = keep the torso in bf16 (less memory, more latency). Measure first."
+
+Resources:
+  DeciderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures: [arm64]
+      MemorySize: 10240        # Lambda maximum; vCPUs scale with memory
+      Timeout: 900             # the first measured fp32 cold start took 852 s
+      EphemeralStorage:
+        Size: 512
+      Environment:
+        Variables:
+          DECIDER_KEEP_BF16: !Ref KeepBf16
+      # No public Function URL: the agent invokes it with boto3 (lambda:InvokeFunction).
+    Metadata:
+      DockerTag: decider-v19
+      DockerContext: .
+      Dockerfile: Dockerfile
+
+Outputs:
+  DeciderFunctionArn:
+    Value: !GetAtt DeciderFunction.Arn
