@@ -8,7 +8,8 @@ Summary of the measurements:
 - Lambda **works** at 10,240 MB: ~2.2 s (fp32) or ~2.4 s (bf16) per warm decision with one question,
   and 6.7–7.1 s with three questions.
 - Cold starts ranged from tens of seconds to ~14 minutes.
-- fp32 peaked at 10,229 of 10,240 MB; bf16 at ~3.6–3.8 GB. **bf16 is the recommended variant.**
+- fp32 peaked at 10,229 of 10,240 MB; bf16 at ~3.6–3.8 GB. **bf16 is the recommended variant only where
+  the host CPU supports bf16**; elsewhere it is unusably slow. See [bf16 needs CPU support](#bf16-needs-cpu-support).
 
 > **Cost warning:** deploying in your account is billed (CodeBuild, ECR storage, Lambda duration,
 > CloudWatch Logs). The full measurement run cost about USD 0.40. Run the teardown when you finish.
@@ -63,7 +64,8 @@ python scripts/aws_lambda/teardown.py                # delete everything and ver
    policy (project logs, push to that repository, `GetAuthorizationToken`), and an `ARM_CONTAINER`
    project. The build context travels base64-encoded inside the inline buildspec, so no S3 bucket is needed.
 2. **Function.** `deploy_function.py` creates a role with `AWSLambdaBasicExecutionRole` and the function
-   (`PackageType=Image`, `arm64`, 10,240 MB, 900 s). Switch to bf16 with `DECIDER_KEEP_BF16=1`.
+   (`PackageType=Image`, `arm64`, 10,240 MB, 900 s). Switch to bf16 with `DECIDER_KEEP_BF16=1`, after
+   checking the logs as described in [bf16 needs CPU support](#bf16-needs-cpu-support).
 3. **Measurement.** `measure.py` writes per-invocation CSV/JSONL and REPORT lines to `results/aws_lambda/`.
 4. **Teardown.** See the warning below.
 
@@ -96,7 +98,8 @@ From [Lambda quotas](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted
 | bf16 at other memory sizes | 4,096 MB: 151.9 s; 6,144 MB: 127.5 s (26.6 s with 3 threads); 8,192 MB: 28.6 s |
 
 The cause of the long first cold start was not isolated (one hypothesis is lazy image loading from ECR
-plus fp32 memory pressure). Use bf16, a 900 s timeout, and a warm-up invocation after each deploy.
+plus fp32 memory pressure). Use a 900 s timeout and a warm-up invocation after each deploy, and bf16
+where the CPU supports it.
 Provisioned concurrency avoids cold starts but is billed even without traffic, and only helps if the
 model load moves out of the first invocation. `cold_start_load_ms` in the response measures the model load.
 
@@ -117,12 +120,35 @@ Excludes ECR, CloudWatch Logs and cold starts (one 852 s fp32 cold start cost 8,
 **Watch torch threads.** With default threads, bf16 at 4,096 and 6,144 MB took 100–130 s per decision;
 at 8,192 MB, 2.8 s. With `TORCH_NUM_THREADS=3`, 6,144 MB took 2.3 s. If you lower memory, pin threads and measure.
 
+## bf16 needs CPU support
+
+`DECIDER_KEEP_BF16=1` is only fast when the CPU has bf16 instructions. Otherwise torch logs this on the
+first evaluation and falls back to a much slower path:
+
+```
+UserWarning: mkldnn_matmul failed, switching to BLAS gemm:mkldnn_matmul: mkldnn_matmul bf16 path needs a cpu with bf16 support
+```
+
+A second deployment of this same image to Lambda arm64 in **ap-northeast-1** (October 2026, 10,240 MB)
+hit that fallback:
+
+| Variant | One request with five questions |
+|---|---|
+| bf16 | ~742 s of evaluation after a ~116 s model load (REPORT 858.7 s); the client timed out at 900 s |
+| fp32 | 8.1 s warm (REPORT); first request 218 s, of which 205 s was the model load. Peak memory 10,227 MB |
+
+Lambda does not let you choose the CPU generation, and these measurements do not show which regions or
+hosts lack bf16. After every deploy with bf16, invoke once and search the function's logs for
+`bf16 path needs a cpu with bf16 support`. If it is there, set `DECIDER_KEEP_BF16=0`. fp32 fits in
+10,240 MB, but with only ~13 MB to spare.
+
 ## Problems found
 
 | Problem | Fix |
 |---|---|
 | The PyPI torch wheel for aarch64 is not CPU-only: torch 2.11.0 pulls ~4 GB of CUDA libraries and the image reached 10.09 GB. | Install torch from `https://download.pytorch.org/whl/cpu` on arm64 too; the image dropped to 6.20 GB. |
-| fp32 uses 10,229 of 10,240 MB. | Use bf16. |
+| fp32 uses 10,229 of 10,240 MB. | Use bf16 if the host CPU supports it; otherwise stay on fp32. |
+| bf16 on a CPU without bf16 support: one five-question request took ~742 s in ap-northeast-1. | Check the logs for `bf16 path needs a cpu with bf16 support` and use fp32 (see [bf16 needs CPU support](#bf16-needs-cpu-support)). |
 | Torch prints `Error in cpuinfo: failed to parse the list of possible processors` on import. | Harmless in these tests. |
 
 ## Alternatives
